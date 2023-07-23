@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://kit.fontawesome.com/213382546f.js" crossorigin="anonymous"></script>
+    <title>Clima</title>
+    <style>
+        *{
+            box-sizing: border-box;
+        }
+        .location{
+            width: 100%;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .resume{
+            display: flex;
+            justify-content:center;
+            margin-top: 50px;
+        }
+
+        .resume > div {
+            padding: 20px;
+        }
+        .details {
+            display: flex;
+            justify-content: space-evenly;
+            margin-top: 50px;
+        }
+
+        .temperature,.pressue,.wind,.cloud,.rain{
+            padding: 5px;
+        }
+
+        .temperature,.pressue,.wind,.cloud,.rain > div{
+            padding: 5px;
+        }
+
+        .weather-data{
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .w-100{
+            width:100%;
+        }
+
+        .txt-center{
+            text-align: center;
+        }
+
+        .txt-capitalize {
+            text-transform: capitalize;
+        }
+
+        .error{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="location">
+        <h1>Clima em <span id="cityName"></span></h1>
+        <h2>Última previsão <span id="humanDate"></span></h2>
+        <h3>Data e hora atual <span id="currentDateTime"></span></h3>
+        
+    </div>
+
+    <div id="resume" class="resume">
+            <div>
+                <p><i class="fa-solid fa-cloud-sun fa-2xl"></i> <span id="weatherResume" class="weather-data txt-capitalize"></span> (clima)</p>
+            </div>
+            <div>
+                <p><i class="fa-solid fa-eye fa-2xl"></i> <span id="visibility" class="weather-data "></span> (visibilidade)</p>
+            </div>
+            <div>
+                
+                <p><i class="fa-solid fa-cloud fa-2xl"></i> <span id="clouds" class="weather-data"></span> (nuvems)</p>
+            </div>
+    </div>
+
+    <div id="details" class="details">
+
+        <div class="temperature">
+            <div><i class="fa-solid fa-temperature-full fa-2xl w-100 txt-center"></i></div>
+
+            <div>
+                <p><span id="feels_like" class="weather-data"></span> Sensação</p>
+            </div>
+
+            <div>
+                <p><span id="temp_min" class="weather-data"></span> Min. </p>
+            </div>
+
+            <div>
+                <p><span id="temp" class="weather-data"></span> Media</p>
+            </div>
+
+            <div>
+                <p><span id="temp_max" class="weather-data"></span> Máx.</p>
+            </div>
+            <div>
+                <p><span id="humidity" class="weather-data"></span> Humidade </p>
+            </div>
+
+        </div>
+
+        <div class="pressure">
+            <div><i class="fa-solid fa-arrows-up-down fa-2xl w-100 txt-center"></i></div>
+
+            <div>
+                <p><span id="pressure" class="weather-data"></span> Pressão atmosfera</p>
+            </div>
+            <div>
+                <p><span id="pressureSeaLvl" class="weather-data"></span> Nivel mar </p>
+            </div>
+            <div>
+                <p><span id="pressureGroundLvl" class="weather-data"></span> Nivel chão </p>
+            </div>
+
+        </div>
+
+        <div class="wind">
+            <div><i class="fa-solid fa-wind fa-2xl w-100 txt-center"></i></div>
+            <div>
+                <p>Velocidade <span id="windSpeed" class="weather-data"></span> </p>
+            </div>
+            <div>
+                <p>Vento direção <span id="windDirection" class="weather-data"></span></p>
+            </div>
+            <div>
+                <p><span id="windGust" class="weather-data"></span> Rajadas </p>
+            </div>
+        </div>
+
+        <div class="cloud">
+            <div><i class="fa-solid fa-cloud-rain fa-2xl w-100 txt-center"></i></div>
+            <div>
+                <p><span id="rain1Hr" class="weather-data"></span> há 1hr</p>
+            </div>
+            <div>
+                <p><span id="rain3Hr" class="weather-data"></span> há 3hr</p>
+            </div>
+        </div>
+
+        <div class="snow">
+            <div><i class="fa-solid fa-snowflake fa-2xl w-100 txt-center"></i></div>
+            <div>
+                <p><span id="snow1Hr" class="weather-data"></span> há 1hr</p>
+            </div>
+            <div>
+                <p><span id="snow3Hr" class="weather-data"></span> há 3hr</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="error" class="error">
+        <p><i class="fa-solid fa-face-sad-tear fa-2xl w-100 txt-center"></i></p>
+        <h2 class="txt-center"> Ooops! Por enquanto não conseguimos mostrar a previsão do clima. Intente daqui a de 5 min por favor.</h2>
+    </div>
+    
+    <script>
+        const weatherDataKey = "weather-data" // key local storage
+        const weatherExpireKey = "weather-expired" // key local storage
+        const fiveMinMs = 300 * 1000 // each 5 min
+        const resumeDiv = document.getElementById("resume");
+        const detailsDiv = document.getElementById("details");
+        const errorDiv = document.getElementById("error");
+
+        document.addEventListener("DOMContentLoaded", function(e) {
+
+            setInterval(function() {
+                document.getElementById("currentDateTime").textContent = currentDateTime();
+            }, 1000);
+
+            var expireData = localStorage.getItem(weatherExpireKey);
+            var weatherData = localStorage.getItem(weatherDataKey);
+
+            if (!expireData && !weatherData) {
+                // Show from api
+                getWheater();
+            }
+            
+            if(expireData && weatherData){
+                // Show from local storage
+                showWeatherData(JSON.parse(localStorage.getItem(weatherDataKey)));
+            }
+
+            setInterval(function() {
+                // Repeat show from api
+                localStorage.removeItem(weatherDataKey);
+                localStorage.removeItem(weatherExpireKey);
+                getWheater();
+
+            }, fiveMinMs);
+
+        });
+
+        // Lat e lon de Curitiba
+        function getWheater(lat=-25.4295963,lon=-49.2712724,units='metric',lang='pt'){
+
+            const apiDomain = "https://api.openweathermap.org/data/2.5/weather";
+            const apiKey = "5821419f83d48b8aab70eb3f6acc9aed";
+            const endpoint = `${apiDomain}?lat=${lat}&lon=${lon}&units=${units}&lang=${lang}&appid=${apiKey}`;
+            
+            fetch(endpoint)
+            .then((res) => res.json())
+            .then(function(response) {
+
+                if (response && response.cod === 200){
+
+                    resumeDiv.style.display = 'flex';
+                    detailsDiv.style.display = 'flex';
+                    errorDiv.style.display = 'none';
+
+                    // Degrees - Directions
+                    const windDirections = {
+                        d10:'Norte',
+                        d20:'Norte / Nordeste',
+                        d30:'Norte / Nordeste',
+                        d40:'Nordeste',
+                        d50:'Nordeste',
+                        d60:'Este / Nordeste',
+                        d70:'Este / Nordeste',
+                        d80:'Este',
+                        d90:'Este',
+                        d100:'Este',
+                        d110:'Este / Sureste',
+                        d120:'Este / Sureste',
+                        d130:'Suleste',
+                        d140:'Suleste',
+                        d150:'Sul / Suleste',
+                        d160:'Sul / Suleste',
+                        d170:'Sul',
+                        d180:'Sul',
+                        d190:'Sul',
+                        d200:'Sul / Sul Oeste',
+                        d210:'Sul / Sul Oeste',
+                        d220:'Sul Oeste',
+                        d230:'Sul Oeste',
+                        d240:'Oeste / Sul Oeste',
+                        d250:'Oeste / Sul Oeste',
+                        d260:'Oeste',
+                        d270:'Oeste',
+                        d280:'Oeste',
+                        d290:'Oeste / Norte Oeste',
+                        d300:'Oeste / Norte Oeste',
+                        d310:'Norte Oeste',
+                        d320:'Norte Oeste',
+                        d330:'Norte / Norte Oeste',
+                        d340:'Norte / Norte Oeste',
+                        d350:'Norte',
+                        d360:'Norte',
+                    }
+
+                    const data = {
+                        humanDate: (response.dt)? new Date( ( response.dt * 1000 ) ).toLocaleString('pt-BR') : '?',
+                        cityName: (response.name)? response.name : '?',
+                        weatherResume: (response.weather[0].description)? response.weather[0].description : '?',
+                        visibility: (response.visibility)? `${response.visibility} metros` : '?',
+                        feelsLike: (response.main.feels_like)? `${response.main.feels_like}°C` : '?',
+                        tempMin: (response.main.temp_min)? `${response.main.temp_min}°C` : '?',
+                        temp: (response.main.temp)? `${response.main.temp}°C` : '?',
+                        tempMax: (response.main.temp_max)? `${response.main.temp_max}°C` : '?',
+                        humidity: (response.main.humidity)? `${response.main.humidity}%` : '?',
+                        pressure: (response.main.pressure)? `${response.main.pressure} hPa` : '?',
+                        pressureSea: (response.main.sea_level)? `${response.main.sea_level} hPa` : '?',
+                        pressureGround: (response.main.grnd_level)? `${response.main.grnd_level} hPa` : '?',
+                        clouds: (response.clouds.all)? `${response.clouds.all}%` : '?',
+                        windSpeed: (response.wind.speed)? `${response.wind.speed} m/s` : '?',
+                        windDirection: (response.wind.deg)? windDirections[`d${response.wind.deg}`] : '?',
+                        windGust: (response.wind.gust)? `${response.wind.gust} m/s` : '?',
+                        rain1Hr: (response.rain && response.rain['rain.1h'])? `${response.rain['rain.1h']} mm` : 'Sem chuva',
+                        rain3Hr: (response.rain && response.rain['rain.3h'])? `${response.rain['rain.3h']} mm` : 'Sem chuva',
+                        snow1Hr: (response.snow && response.snow['snow.1h'])? `${response.snow['snow.1h']} mm` : 'Sem neve',
+                        snow3Hr: (response.snow && response.snow['snow.3h'])? `${response.snow['snow.3h']} mm` : 'Sem neve',
+                    }
+
+                    // Save in local storage
+                    localStorage.setItem(weatherExpireKey, ( Date.now() + fiveMinMs ));
+                    localStorage.setItem(weatherDataKey, JSON.stringify(data));
+
+                    showWeatherData(data);
+
+                }// code 200
+                else {
+                    showError()
+                }
+
+            })
+            .catch(function(error) {
+                showError()
+                console.log(error);
+            });
+
+        }
+
+        const showWeatherData = function showWeather(data){
+            // Geolocation
+            document.getElementById('cityName').textContent = data.cityName
+            document.getElementById('humanDate').textContent = data.humanDate
+            // Weather
+            document.getElementById('weatherResume').textContent = data.weatherResume
+            // Visibility
+            document.getElementById("visibility").textContent = data.visibility
+
+            // Temperature
+            document.getElementById('feels_like').textContent = data.feelsLike
+            document.getElementById('temp_min').textContent = data.tempMin
+            document.getElementById('temp').textContent = data.temp
+            document.getElementById('temp_max').textContent = data.tempMax
+            document.getElementById('humidity').textContent = data.humidity
+            
+            // Pressure
+            document.getElementById('pressure').textContent = data.pressure
+            document.getElementById('pressureSeaLvl').textContent = data.pressureSea
+            document.getElementById('pressureGroundLvl').textContent = data.pressureGround
+            
+            // Clouds
+            document.getElementById("clouds").textContent = data.clouds
+
+            // Winds 
+            document.getElementById("windSpeed").textContent = data.windSpeed
+            document.getElementById("windDirection").textContent = data.windDirection
+            document.getElementById("windGust").textContent = data.windGust
+
+            // Rain
+            document.getElementById("rain1Hr").textContent = data.rain1Hr
+            document.getElementById("rain3Hr").textContent = data.rain3Hr
+
+            // Snow
+            document.getElementById("snow1Hr").textContent = data.snow1Hr
+            document.getElementById("snow3Hr").textContent = data.rain3Hr
+        }
+
+        function currentDateTime(){
+            let now = Date.now();
+            return new Date(now).toLocaleString('pt-BR');
+        }
+
+        function showError(){
+            document.getElementById('cityName').textContent = '?'
+            document.getElementById('humanDate').textContent = '?'
+            resumeDiv.style.display = 'none';
+            detailsDiv.style.display = 'none';
+            errorDiv.style.display = 'block';
+        }
+        
+    </script>
+</body>
+</html>
